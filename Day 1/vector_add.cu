@@ -3,15 +3,11 @@
 
 //host - cpu
 //device - gpu
-
 //cpu -> gpu -> cpu
 
 __global__ void vector_add(const float* A, const float* B, float* C, int N){
-    
     int i = blockDim.x * blockIdx.x + threadIdx.x;
-
     // n. of grid -> n. of blocks -> n. of threads. (256, 512) 
-
     if (i < N) {
         C[i] = A[i] + B[i];
     }
