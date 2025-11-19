@@ -2,6 +2,8 @@
 
 Implementation of CUDA programs from the book: "Programming Massively Parallel Processors"
 
+<!-- GitAds-Verify: 2YZIV9D1CW1GCHBR14RXRSFPURU7OVG1 -->
+
 ## Why CUDA?
 
 - It leverages the parallel processing power of NVIDIA GPUs for high-performance computing.
@@ -28,7 +30,7 @@ nvcc vector_add.cu -i vector_add #generates executed output in vector_add
 5. Compile the CUDA program.
 6. View the results.
 
-## Task - Matrix Addition
+## Write a CUDA program for Matrix Addition
 
 Key Learning: How does a data structure gets mapped to threads in grid block?
 
