@@ -12,7 +12,7 @@ Implementation of CUDA programs from the book: "Programming Massively Parallel P
 
 ## Task - Parallel Vector Addition
 
-![alt text](image-1.png)
+![alt text](images/image-1.png)
 
 ## How to compile the CUDA program
 
@@ -32,24 +32,31 @@ nvcc vector_add.cu -i vector_add #generates executed output in vector_add
 5. Compile the CUDA program.
 6. View the results.
 
+# Day 2
+
 ## Write a CUDA program for Matrix Addition
 
 Key Learning: How does a data structure gets mapped to threads in grid block?
 
 Adding 2x2 matrix.
 
-![alt text](image-3.png)
+![alt text](images/image-3.png)
 
 **2D Grid of Block**
 
 We use the 2D properties of the CUDA grid and block to determine the row ($i$) and column ($j$) indices for the matrix:
 
-![alt text](image-4.png)
+![alt text](images/image-4.png)
 
 **Matrix-Indices**
 
-![alt text](image-2.png)
+![alt text](images/image-2.png)
 
 **Combining Thread to Matrix indices**
 
-![alt text](image-6.png)
+![alt text](images/image-6.png)
+
+# Day 3
+
+## Write a CUDA program for matrix-vector multiplication
+
