@@ -60,3 +60,10 @@ We use the 2D properties of the CUDA grid and block to determine the row ($i$) a
 
 ## Write a CUDA program for matrix-vector multiplication
 
+Matrix-vector multiplication is an operation where a matrix and a vector are combined to produce a new vector. It's defined only when the number of columns in the matrix equals the number of rows (elements) in the vector. The resulting vector is a linear combination of the matrix's columns, where the components of the input vector act as the scalar coefficients.
+
+![](images/image-7.png)
+
+**Index-wise Computation**
+
+![alt text](images/image-8.png)
