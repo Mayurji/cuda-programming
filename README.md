@@ -8,6 +8,10 @@ Implementation of CUDA programs from the book: "Programming Massively Parallel P
 
 - It leverages the parallel processing power of NVIDIA GPUs for high-performance computing.
 
+### Watch on YouTube
+
+[Master CUDA Programming: Zero to Hero](https://www.youtube.com/playlist?list=PLVVBQldz3m5v1VDhlCyB1DhPfjREsJWmf)
+
 # Day 1
 
 ## Task - Parallel Vector Addition
