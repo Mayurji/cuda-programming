@@ -71,3 +71,91 @@ Matrix-vector multiplication is an operation where a matrix and a vector are com
 **Index-wise Computation**
 
 ![alt text](images/image-8.png)
+
+# Day 4
+
+## Write a CUDA Program for Parallel Prefix Sum (Inclusive scan) algorithm
+
+It computes the cumulative sum (or other associative binary operation) of elements in an array in parallel.
+
+Given an input array:
+
+```
+[ a0, a1, a2, a3, ... , an ]
+```
+
+The inclusive prefix sum (scan) computes an output array as follows:
+
+```
+[ a0,
+  a0+a1,
+  a0+a1+a2,
+  a0+a1+a2+a3, ... ]
+```
+
+So each output element i is the sum of all elements up to and including index i.
+
+![alt text](images/prefix_sum.png)
+
+### **Why do we care?**
+
+*Prefix sum powers many parallel algorithms: compaction, sorting, histogramming, polynomial evaluation, cumulative distributions, etc.*
+
+### **Why Parallelization Matters?**
+
+A sequential prefix sum requires O(n) steps:
+
+```
+out[i] = out[i-1] + in[i]
+```
+Each element depends on the previous one → inherently sequential.
+
+The magic of parallel scan is transforming this dependency into a form that can be computed in O(log n) time using n processors, by restructuring the computation as a tree.
+
+There are two-phases to Parallel Scan Algorithm
+
+### **Phase 1: Upsweep**
+Build a tree of partial sums.
+
+Consider 8 elements:
+```
+Index: 0 1 2 3 4 5 6 7
+Value: a b c d e f g h
+```
+
+**Step 0 (stride=1): Pairs of Two**
+
+```
+[ a, b, c, d, e, f, g, h ]
+     ^     ^     ^
+     b+=a  d+=c  f+=e  h+=g
+```
+
+**Step 1 (stride=2): Blocks of 4**
+
+```
+[ a, a+b, c, c+d, e, e+f, g, g+h ]
+               ^            ^
+               (a+b)+(c+d)  (e+f)+(g+h)
+```
+
+**Step 2 (stride=3): Block of 8**
+
+```
+root = (a+b+c+d) + (e+f+g+h)
+```
+
+Now we have a sum-reduction tree.
+
+### **Phase 2: DownSweep**
+
+Propagate partial sums back down the tree to compute prefix sums.
+
+Before downsweep, set the root to 0 (for exclusive scan).
+For inclusive scan, we simply adjust the last step or convert at the end.
+
+In downsweep, each node passes its left child unchanged, and passes left+current to the right child.
+
+Eventually, every index receives its correct prefix sum.
+
+https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda
