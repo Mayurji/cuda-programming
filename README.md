@@ -74,7 +74,10 @@ Matrix-vector multiplication is an operation where a matrix and a vector are com
 
 # Day 4
 
-## Write a CUDA Program for Parallel Prefix Sum (Inclusive scan) algorithm
+## Write a CUDA Program for Simplified Block-wise Prefix Sum 
+
+<img src="images/shared_mem.png" alt="Shared memory" width="400"/>
+
 
 It computes the cumulative sum (or other associative binary operation) of elements in an array in parallel.
 
@@ -92,14 +95,7 @@ The inclusive prefix sum (scan) computes an output array as follows:
   a0+a1+a2,
   a0+a1+a2+a3, ... ]
 ```
-
 So each output element i is the sum of all elements up to and including index i.
-
-![alt text](images/prefix_sum.png)
-
-### **Why do we care?**
-
-*Prefix sum powers many parallel algorithms: compaction, sorting, histogramming, polynomial evaluation, cumulative distributions, etc.*
 
 ### **Why Parallelization Matters?**
 
@@ -112,50 +108,55 @@ Each element depends on the previous one → inherently sequential.
 
 The magic of parallel scan is transforming this dependency into a form that can be computed in O(log n) time using n processors, by restructuring the computation as a tree.
 
-There are two-phases to Parallel Scan Algorithm
+### Implement a Simplified Block-wise Prefix Sum
 
-### **Phase 1: Upsweep**
-Build a tree of partial sums.
+It leverages CUDA capabilities to perform
 
-Consider 8 elements:
-```
-Index: 0 1 2 3 4 5 6 7
-Value: a b c d e f g h
-```
+     - Concurrent Execution: From O(n) to O(log n)
+     - Shared Memory: Accessing results(partial sum) performed by other threads in previous iteration into current thread.
+     - Coalesced Memory Access: Single thread reads multiple locations.
 
-**Step 0 (stride=1): Pairs of Two**
+*Coalescing is a memory optimization technique where the GPU hardware automatically combines multiple small memory requests from a group of threads (a warp) into a single, larger, and highly efficient memory transaction.*
 
-```
-[ a, b, c, d, e, f, g, h ]
-     ^     ^     ^
-     b+=a  d+=c  f+=e  h+=g
-```
+![alt text](images/memory_coalesce.png)
 
-**Step 1 (stride=2): Blocks of 4**
+### Input and Kernel Configuration
 
-```
-[ a, a+b, c, c+d, e, e+f, g, g+h ]
-               ^            ^
-               (a+b)+(c+d)  (e+f)+(g+h)
-```
+**Input (h_input) = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}**
 
-**Step 2 (stride=3): Block of 8**
+**Block Size (BlockDim.x) = 8 threads**
 
-```
-root = (a+b+c+d) + (e+f+g+h)
-```
+**Grid Size: 2 Blocks(block 0 handles indices 0-7 and block 1 handles indices 8-15)**
 
-Now we have a sum-reduction tree.
+**Step 1: Initial Loading and Combine(Coalescing)**
 
-### **Phase 2: DownSweep**
+![alt text](images/load_coalesce.png)
 
-Propagate partial sums back down the tree to compute prefix sums.
+We store the results in the shared memory after loading.
 
-Before downsweep, set the root to 0 (for exclusive scan).
-For inclusive scan, we simply adjust the last step or convert at the end.
+**Step 2: Parallel Inclusive Scan**
 
-In downsweep, each node passes its left child unchanged, and passes left+current to the right child.
+Iterate through block of threads in a logarithmic loop.
 
-Eventually, every index receives its correct prefix sum.
+`for (int stride=1; stride < BlockDim.x; stride *= 2)`
 
-https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda
+Iteration 1: *stride = 1*
+
+if Thread with tid >= 1 read from (tid - 1)
+
+![alt text](images/scan.png)
+
+
+Iteration 2: *stride = 2*
+
+if Thread with tid >= 2 read from (tid - 2)
+
+Iteration 3: *stride = 4*
+
+if Thread with tid >= 4 read from (tid - 4)
+
+**Shared memory after scan**
+
+S = {10, 22, 36, 52, 70, 90, 112, 136}
+
+Step 3: **Write the shared memory to global memory**
