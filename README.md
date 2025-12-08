@@ -160,3 +160,124 @@ if Thread with tid >= 4 read from (tid - 4)
 S = {10, 22, 36, 52, 70, 90, 112, 136}
 
 Step 3: **Write the shared memory to global memory**
+
+# Day 5
+
+## Write a CUDA program for Layer Normalization In a Neural Network (Transformer Architecture)
+
+**Layer Normalization is a technique commonly used in Neural Networks (especially Transformers) to normalize the inputs across the features (columns) of an input sample (row).**
+
+During neural network training, we use layer normalization to stabilise the training process.
+
+<img src="images/layer_norm.png" alt="Layer normalization" width="400"/>
+
+**2D into Row-Major Order**
+
+<img src="images/row-maj-ord.png" alt="2d-row-major-order" width="500"/>
+
+## 🌟 Sample 3x3 Layer Normalization Walkthrough
+
+Let's assume the input matrix **A** (3 rows, 3 columns) is the following:
+
+$$
+\mathbf{A} = \begin{pmatrix}
+1 & 2 & 3 \\
+10 & 11 & 12 \\
+0 & 0.5 & 1
+\end{pmatrix}
+$$
+
+The Layer Normalization is applied **independently to each row** (sample) of the matrix.
+
+---
+
+### Row 1: (1, 2, 3)
+
+The normalization steps (Mean, Variance, Normalize) are applied to the elements $\mathbf{A}_{1} = (1, 2, 3)$.
+
+1.  **Calculate Mean ($\mu$):**
+    $$
+    \mu = \frac{1 + 2 + 3}{3} = \frac{6}{3} = \mathbf{2.0}
+    $$
+2.  **Calculate Variance ($\sigma^2$):**
+    $$
+    \sigma^2 = \frac{(1-2)^2 + (2-2)^2 + (3-2)^2}{3} = \frac{(-1)^2 + 0^2 + 1^2}{3} = \frac{1 + 0 + 1}{3} = \frac{2}{3} \approx \mathbf{0.6667}
+    $$
+3.  **Calculate Standard Deviation ($\sigma$):** (Ignoring the small $\epsilon=1\mathrm{e}{-7}$ for simplicity)
+    $$
+    \sigma = \sqrt{\sigma^2} = \sqrt{\frac{2}{3}} \approx \mathbf{0.8165}
+    $$
+4.  **Normalize (Output Row $\mathbf{B}_{1}$):**
+    $$
+    \mathbf{B}_{1} = \left(\frac{1-2}{0.8165}, \frac{2-2}{0.8165}, \frac{3-2}{0.8165}\right) \approx (-1.22, 0, 1.22)
+    $$
+
+---
+
+### Row 2: (10, 11, 12)
+
+The normalization steps are applied to the elements $\mathbf{A}_{2} = (10, 11, 12)$.
+
+1.  **Calculate Mean ($\mu$):**
+    $$
+    \mu = \frac{10 + 11 + 12}{3} = \frac{33}{3} = \mathbf{11.0}
+    $$
+2.  **Calculate Variance ($\sigma^2$):**
+    $$
+    \sigma^2 = \frac{(10-11)^2 + (11-11)^2 + (12-11)^2}{3} = \frac{(-1)^2 + 0^2 + 1^2}{3} = \frac{2}{3} \approx \mathbf{0.6667}
+    $$
+3.  **Calculate Standard Deviation ($\sigma$):**
+    $$
+    \sigma = \sqrt{\frac{2}{3}} \approx \mathbf{0.8165}
+    $$
+4.  **Normalize (Output Row $\mathbf{B}_{2}$):**
+    $$
+    \mathbf{B}_{2} = \left(\frac{10-11}{0.8165}, \frac{11-11}{0.8165}, \frac{12-11}{0.8165}\right) \approx (-1.22, 0, 1.22)
+    $$
+
+---
+
+### Row 3: (0, 0.5, 1)
+
+The normalization steps are applied to the elements $\mathbf{A}_{3} = (0, 0.5, 1)$.
+
+1.  **Calculate Mean ($\mu$):**
+    $$
+    \mu = \frac{0 + 0.5 + 1}{3} = \frac{1.5}{3} = \mathbf{0.5}
+    $$
+2.  **Calculate Variance ($\sigma^2$):**
+    $$
+    \sigma^2 = \frac{(0-0.5)^2 + (0.5-0.5)^2 + (1-0.5)^2}{3} = \frac{0.25 + 0 + 0.25}{3} = \frac{0.5}{3} \approx \mathbf{0.1667}
+    $$
+3.  **Calculate Standard Deviation ($\sigma$):**
+    $$
+    \sigma = \sqrt{\sigma^2} = \sqrt{\frac{0.5}{3}} \approx \mathbf{0.4082}
+    $$
+4.  **Normalize (Output Row $\mathbf{B}_{3}$):**
+    $$
+    \mathbf{B}_{3} = \left(\frac{0-0.5}{0.4082}, \frac{0.5-0.5}{0.4082}, \frac{1-0.5}{0.4082}\right) \approx (-1.22, 0, 1.22)
+    $$
+
+---
+
+## Final Input and Output
+
+### Sample Input Matrix $\mathbf{A}$ (Host Array `A` and Device Array `d_a`)
+$$
+\mathbf{A} = \begin{pmatrix}
+1.00 & 2.00 & 3.00 \\
+10.00 & 11.00 & 12.00 \\
+0.00 & 0.50 & 1.00
+\end{pmatrix}
+$$
+
+### Expected Output Matrix $\mathbf{B}$ (Host Array `B` and Device Array `d_b`)
+$$
+\mathbf{B} \approx \begin{pmatrix}
+-1.22 & 0.00 & 1.22 \\
+-1.22 & 0.00 & 1.22 \\
+-1.22 & 0.00 & 1.22
+\end{pmatrix}
+$$
+
+**Observation:** Notice that although the input rows had vastly different magnitudes (1 to 3 vs. 10 to 12), the output rows have the **same mean (0) and standard deviation (1)**, demonstrating how Layer Normalization scales the data to a uniform distribution within each row.
