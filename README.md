@@ -2,15 +2,15 @@
 
 Implementation of CUDA programs from the book: "Programming Massively Parallel Processors"
 
+**Follow the implementation on YouTube Playlist**
+
+[Master CUDA Programming: From Zero to Hero](https://www.youtube.com/playlist?list=PLVVBQldz3m5v1VDhlCyB1DhPfjREsJWmf)
+
 <!-- GitAds-Verify: 2YZIV9D1CW1GCHBR14RXRSFPURU7OVG1 -->
 
 ## Why CUDA?
 
 - It leverages the parallel processing power of NVIDIA GPUs for high-performance computing.
-
-### Watch on YouTube
-
-[Master CUDA Programming: Zero to Hero](https://www.youtube.com/playlist?list=PLVVBQldz3m5v1VDhlCyB1DhPfjREsJWmf)
 
 # Day 1
 
