@@ -281,3 +281,13 @@ $$
 $$
 
 **Observation:** Notice that although the input rows had vastly different magnitudes (1 to 3 vs. 10 to 12), the output rows have the **same mean (0) and standard deviation (1)**, demonstrating how Layer Normalization scales the data to a uniform distribution within each row.
+
+# Day 6
+
+## Matrix Transpose
+
+<img src="images/matrix_transpose.png" alt="matrix-transpose" width="850"/>
+
+### **Mapping Thread to Matrix indices**
+
+![alt text](images/image-6.png)
