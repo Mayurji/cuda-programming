@@ -292,6 +292,8 @@ $$
 
 ![alt text](images/image-6.png)
 
+# Day 7
+
 ## Efficient Matrix Transpose using Tiling Strategy
 
 **Issue with previous approach:**
