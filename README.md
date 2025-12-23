@@ -296,6 +296,8 @@ $$
 
 **Issue with previous approach:**
 
+<img src="images/wrap.png" alt="matrix-transpose" width="700"/>
+
 Reads (Coalesced): Threads in a warp (a group of 32 threads) usually have consecutive x values. In input[y * width + x], adjacent threads read adjacent memory addresses. This is fast (coalesced).
 
 Writes (Uncoalesced): In output[x * height + y], adjacent threads (with consecutive x) write to memory addresses separated by height. This is a strided access pattern, which is very slow on GPUs because it requires many separate memory transactions.
@@ -304,9 +306,7 @@ Optimization Tip: Optimized CUDA transpose kernels typically use Shared Memory t
 
 ### **GPU tiling strategy**
 
-It breaks large data (like matrices) into smaller "tiles" that fit into fast on-chip memory (shared memory/registers), reducing slow global memory accesses by reusing data locally, dramatically boosting performance for compute-intensive tasks like matrix multiplication by making kernels compute-bound instead of memory-bound. This involves threads loading tile data into shared memory, processing it, and then moving to the next tile, maximizing data locality and leveraging hardware like Tensor Cores for massive parallelism, with newer tools like CUDA Tile simplifying this for developers. 
-
-<img src="images/wrap.png" alt="matrix-transpose" width="700"/>
+**<span style="color: red;">It breaks large data (like matrices) into smaller "tiles" that fit into fast on-chip memory (shared memory/registers), reducing slow global memory accesses by reusing data locally, dramatically boosting performance for compute-intensive tasks like matrix multiplication by making kernels compute-bound instead of memory-bound. This involves threads loading tile data into shared memory, processing it, and then moving to the next tile, maximizing data locality and leveraging hardware like Tensor Cores for massive parallelism, with newer tools like CUDA Tile simplifying this for developers. </span>**
 
 **Shared Memory and Global Memory**
 
@@ -314,10 +314,15 @@ It breaks large data (like matrices) into smaller "tiles" that fit into fast on-
 
 ### Core Concept: Memory Hierarchy Optimization
 
-Problem: GPUs have massive parallelism but limited bandwidth to main (global) memory. Naive algorithms repeatedly fetch data, bottlenecking performance.
-Solution: Tiling loads small, relevant data chunks (tiles) into fast shared memory or registers.
+**<span style="color: green;">
+Problem: GPUs have massive parallelism but limited bandwidth to main (global) memory. Naive algorithms repeatedly fetch data, bottlenecking performance.</span>**
 
-Benefit: Threads within a thread block work on these local tiles, performing many computations before needing new data from global memory, achieving high arithmetic intensity. 
+**<span style="color: green;">Solution: Tiling loads small, relevant data chunks (tiles) into fast shared memory or registers.</span>**
+
+**<span style="color: green;">Benefit: Threads within a thread block work on these local tiles, performing many computations before needing new data from global memory, achieving high arithmetic intensity. 
+</span>**
+
+<img src="images/tiling.png" alt="Shared memory" width="550"/>
 
 **How it Works (e.g., Matrix Multiplication)**
 
@@ -334,14 +339,18 @@ Specialized Hardware: On modern GPUs, tiles are further broken down (e.g., 4x4) 
 
 **Key Advantages**
 
-Reduced Global Memory Traffic: Significantly fewer reads from slow global memory.
-Improved Compute Utilization: Keeps compute units busy, making kernels compute-bound.
-Data Reuse: Data loaded into shared memory is reused multiple times.
-Portability: Frameworks like CUDA Tile aim to make tiling strategies portable across different GPU generations. 
+- Reduced Global Memory Traffic: Significantly fewer reads from slow global memory.
+
+- Improved Compute Utilization: Keeps compute units busy, making kernels compute-bound.
+
+- Data Reuse: Data loaded into shared memory is reused multiple times.
+
+- Portability: Frameworks like CUDA Tile aim to make tiling strategies portable across different GPU generations. 
 
 **Modern Developments**
 
 TileIR & CuTile: New compiler technologies to generate efficient, portable tiled code automatically, simplifying development.
+
 Multi-level Tiling: Strategies for tiling across different memory levels (registers, shared, L1/L2 cache, HBM) for extreme optimization.
 
 **Warp**
@@ -350,24 +359,41 @@ In NVIDIA GPUs, a warp is the fundamental execution unit, a group of 32 threads 
 
 Key Concepts:
 
-SIMT (Single Instruction, Multiple Threads): The core execution model; one instruction sent to all 32 threads in a warp, each with its own data.
+- SIMT (Single Instruction, Multiple Threads): The core execution model; one instruction sent to all 32 threads in a warp, each with its own data.
 
-Warp Size: Always 32 threads on NVIDIA GPUs.
+- Warp Size: Always 32 threads on NVIDIA GPUs.
 
-Thread Block: A programmer-defined group of threads (e.g., 256, 512) that are further divided into warps by the hardware.
-Streaming Multiprocessor (SM): The GPU core that schedules and executes warps.
+- Thread Block: A programmer-defined group of threads (e.g., 256, 512) that are further divided into warps by the hardware.
 
-Latency Hiding: If one warp stalls (e.g., waiting for memory), the SM quickly switches to another ready warp, keeping CUDA cores busy. 
+- Streaming Multiprocessor (SM): The GPU core that schedules and executes warps.
+
+- Latency Hiding: If one warp stalls (e.g., waiting for memory), the SM quickly switches to another ready warp, keeping CUDA cores busy. 
 
 How it Works:
 
-Grouping: Threads from a block are grouped into warps (32 threads each).
-Scheduling: The SM's scheduler picks warps to run.
+- Grouping: Threads from a block are grouped into warps (32 threads each).
 
-Execution: The warp executes instructions in lockstep. If threads diverge (take different if/else paths), the non-following threads are masked (deactivated) while the branch is taken, leading to inefficiency (warp divergence).
+- Scheduling: The SM's scheduler picks warps to run.
 
-Optimization: Choose thread block sizes (e.g., 128, 256, 512) that are multiples of 32 to fully utilize warp resources and minimize wasted threads in partial warps. 
+- Execution: The warp executes instructions in lockstep. If threads diverge (take different if/else paths), the non-following threads are masked (deactivated) while the branch is taken, leading to inefficiency (warp divergence).
 
-Why it Matters:
+- Optimization: Choose thread block sizes (e.g., 128, 256, 512) that are multiples of 32 to fully utilize warp resources and minimize wasted threads in partial warps. 
 
-Understanding warps helps you write efficient CUDA code, ensuring your threads are grouped and executed optimally, preventing bottlenecks, and maximizing GPU parallelism. 
+**Why it Matters:**
+
+**<span style="color: red;">
+Understanding warps helps you write efficient CUDA code, ensuring your threads are grouped and executed optimally, preventing bottlenecks, and maximizing GPU parallelism.</span>**
+
+**Tile Swap**
+
+<img src="images/tile-swap.png" alt="Shared memory" width="550"/>
+
+**Index Swap**
+
+<img src="images/mat_trans_index.png" alt="Shared memory" width="550"/>
+
+**Multi-Way Bank Conflict**
+
+*It arises when multiple processing threads, executing simultaneously within a group known as a 
+"warp" (NVIDIA) or "wavefront" (AMD), attempt to access different memory addresses that all 
+map to the same underlying physical memory bank at the exact same time.*
