@@ -399,3 +399,86 @@ Understanding warps helps you write efficient CUDA code, ensuring your threads a
 *It arises when multiple processing threads, executing simultaneously within a group known as a 
 "warp" (NVIDIA) or "wavefront" (AMD), attempt to access different memory addresses that all 
 map to the same underlying physical memory bank at the exact same time.*
+
+# Day 8
+
+## Efficient Implementation of 1D Convolution
+
+In deep learning, especially computer vision, Convolution is a good way to identify patterns in data that is directly tied to space or time. Adjacent pixels in an image are adjacent for a reason. Neighboring data points were produced close together in time and are much more likely to be related then points far apart. This inherent structure is what convolution exploits. It finds local patterns that reoccur in the data. It would not be effective, for instance, if we first scrambled the pixels in an image. That would hide the patterns, the spatial relationships, that convolution tries to learn.
+
+### One Dimension Convolution
+
+Zero-padding adds zeros around input data (like images) in convolutions primarily to preserve spatial dimensions (preventing output shrinkage)
+
+![alt text](images/1d-conv.png)
+
+### Convolution Operation
+
+The math behind convolution is an artful combination of multiplication and addition. We can best get a feel for convolution by looking at a one dimensional signal. In this animation, we see a shorter sequence, the kernel, being convolved with a longer sequence, the signal. The math behind convolution doesn’t actually care which of these is longer, but it is convenient for us to assign this convention as we develop them for neural networks.
+
+![alt text](https://raw.githubusercontent.com/brohrer/blog_images/refs/heads/main/conv1d/bb_copy.gif)
+
+The recipe for convolution is surprisingly short:
+
+- Flip the kernel left to right
+- Step the kernel along the signal one data point at a time
+- At each position, calculate the dot product of the two
+    - Multiply each pair of aligned values together
+    - Add up those products
+- The resulting sequence of dot products is the convolution of the kernel with the signal.
+
+### For CUDA Implementation
+
+Constant Memory (__constant__ float M): The convolution mask is stored here. Since every thread in a warp reads the same mask values at the same time, Constant Memory is cached and provides high-speed broadcast access.
+
+Shared Memory (__shared__ float S_A): This is a fast, on-chip cache managed by the programmer. It stores a "tile" of the input array so threads don't have to repeatedly fetch data from the slow Global Memory.
+
+Halo Cells (Ghost Cells): To compute the convolution at the edges of a tile, threads need data from neighboring blocks. These extra elements loaded into Shared Memory are called "Halos."
+
+**What does broadcast access to constant memory means?**
+
+It refers to a highly efficient data retrieval mechanism found in parallel computing architectures, notably NVIDIA's CUDA GPUs, where a single piece of data is fetched once from memory and simultaneously delivered to multiple processing threads.
+
+This process is a key optimization strategy that dramatically improves performance when many threads need the exact same read-only value at the same time, contrasting sharply with standard memory access patterns that might require serializing individual requests.
+
+### Walkthrough an Example
+
+Suppose we have the following inputs defined in the main function:
+
+Array $A$ (size 10): [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] \
+Mask $M$ (width 5): [0, 1, 2, 3, 4] \
+Block Size: 32 (though we only have 10 elements, one block of 32 threads is launched).
+
+**Loading Shared Memory (The "Tile")**
+
+Because the Mask_width is 5, the "radius" (halo size) is 2 ($5 / 2 = 2$). \
+The shared memory array S_A needs to hold the 10 elements of data plus the halos on the left and right.
+
+![alt text](images/convolution_tiling.png)
+
+**The Computation Trace (Thread 3)**
+
+Let's look at Thread 3 ($i = 3$). This thread is responsible for calculating the output at $C[3]$.In the loop for (int k = 0; k < 5; k++), it accesses S_A[threadId + k], which is S_A[3 + k].
+
+![alt text](images/convolution_trace.png)
+
+So, $C[3] = 40.0$.
+
+**Handling the Edge (Thread 0)**
+
+Thread 0 calculates the very first element ($i = 0$). It uses the halo values loaded earlier.
+
+![alt text](images/convolution_edge.png)
+
+**Final Output**
+
+When the program finishes, the array $C$ will contain the "smoothed" or "weighted" \
+version of $A$ based on that ramp mask $[0, 1, 2, 3, 4]$.
+
+A: 0.00 1.00 2.00 3.00 4.00 5.00 6.00 7.00 8.00 9.00
+
+M: 0.00 1.00 2.00 3.00 4.00
+
+C: 11.00 20.00 30.00 40.00 50.00 60.00 70.00 80.00 70.00 44.00
+
+(Note: The values at the very end drop off because the right side of the mask starts hitting the zero-padding.)
